@@ -19,7 +19,7 @@ import ncsa.hdf.object.h5.H5ScalarDS;
 
 public class Main {
 	
-	private String BASE_URL = "https://api.telegram.org/YourTokenThere/"; // You should take your token from @BotFather. Read more on telegram bots API
+	private String BASE_URL = "https://api.telegram.org/bot<YourTokenThere>/"; // You should take your token from @BotFather. Read more on telegram bots API
 	private String POLLING_URL = BASE_URL + "getUpdates";
 	private String SENDMESSAGE_URL = BASE_URL + "sendMessage";
 	
@@ -41,7 +41,7 @@ public class Main {
 	@SuppressWarnings("deprecation")
 	private  Main() {
 		try {
-			hdf5file = (H5File) fileFormat.open("db/testdebug.h5", FileFormat.WRITE);//.create("db/testdebug.h5");
+			hdf5file = (H5File) fileFormat.open("res/db.h5", FileFormat.WRITE);
 			hdf5file.open();
 			run();
 		} catch (Exception e) {
@@ -92,7 +92,7 @@ public class Main {
 					int user_id = message
 							.getJSONObject("from")
 							.getInt("id");
-					if (message.has("text") && chat_id < 0) { // for channels id is always lower than zero, and in the private chats id is greater than zero
+					if (message.has("text") && chat_id < 0) {
 						String text = message.getString("text");
 						try {
 							if ((dset = (H5ScalarDS) hdf5file.get(String.valueOf(chat_id) + "," + String.valueOf(user_id))) != null) {
@@ -146,44 +146,3 @@ public class Main {
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
