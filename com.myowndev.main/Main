@@ -38,7 +38,6 @@ public class Main {
 		new Main();
 	}
 	
-	@SuppressWarnings("deprecation")
 	private  Main() {
 		try {
 			hdf5file = (H5File) fileFormat.open("res/db.h5", FileFormat.WRITE);
