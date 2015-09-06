@@ -1,0 +1,189 @@
+package com.myowndev.main;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
+
+import ncsa.hdf.hdf5lib.H5;
+import ncsa.hdf.hdf5lib.HDF5Constants;
+import ncsa.hdf.object.Dataset;
+import ncsa.hdf.object.Datatype;
+import ncsa.hdf.object.FileFormat;
+import ncsa.hdf.object.h5.H5Datatype;
+import ncsa.hdf.object.h5.H5File;
+import ncsa.hdf.object.h5.H5ScalarDS;
+
+public class Main {
+	
+	private String BASE_URL = "https://api.telegram.org/YourTokenThere/"; // You should take your token from @BotFather. Read more on telegram bots API
+	private String POLLING_URL = BASE_URL + "getUpdates";
+	private String SENDMESSAGE_URL = BASE_URL + "sendMessage";
+	
+	private FileFormat fileFormat = FileFormat.getFileFormat(FileFormat.FILE_TYPE_HDF5);
+	private H5File hdf5file;
+	private Dataset dset = null;
+	private int dset_id = -1;
+	private long[] dims = { 1, 2 };
+	private int[][] dset_data = new int[2][3];
+	private int[] dset_data_temp = new int[3];
+	private final H5Datatype typeInt = new H5Datatype(
+			Datatype.CLASS_INTEGER, 4,
+			Datatype.NATIVE, Datatype.NATIVE);
+	
+	public static void main(String args[]) {
+		new Main();
+	}
+	
+	@SuppressWarnings("deprecation")
+	private  Main() {
+		try {
+			hdf5file = (H5File) fileFormat.open("db/testdebug.h5", FileFormat.WRITE);//.create("db/testdebug.h5");
+			hdf5file.open();
+			run();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private  HttpResponse<JsonNode> sendMessage(Integer chatId, String text) throws UnirestException {
+		return Unirest
+				.post(SENDMESSAGE_URL)
+				.field("chat_id", chatId)
+				.field("text", text).asJson();
+	}
+	
+	private  HttpResponse<JsonNode> getUpdates(Integer offset) throws UnirestException {
+		return Unirest
+				.post(POLLING_URL)
+				.field("offset", offset)
+				.asJson();
+	}
+	
+	private void run() throws UnirestException {
+		
+		int last_update_id = 0;
+		HttpResponse<JsonNode> response;
+		
+		while (true) {
+			response = getUpdates(last_update_id++);
+			if (response.getStatus() == 200) {
+				JSONArray responses = response
+						.getBody()
+						.getObject()
+						.getJSONArray("result");
+				if (responses.isNull(0)) {
+					continue;
+				} else {
+					last_update_id = responses
+						.getJSONObject(responses.length() - 1)
+						.getInt("update_id") + 1;
+				}
+				for (int i = 0; i < responses.length(); i++) {
+					JSONObject message = responses
+							.getJSONObject(i)
+							.getJSONObject("message");
+					int chat_id = message
+							.getJSONObject("chat")
+							.getInt("id");
+					int user_id = message
+							.getJSONObject("from")
+							.getInt("id");
+					if (message.has("text") && chat_id < 0) { // for channels id is always lower than zero, and in the private chats id is greater than zero
+						String text = message.getString("text");
+						try {
+							if ((dset = (H5ScalarDS) hdf5file.get(String.valueOf(chat_id) + "," + String.valueOf(user_id))) != null) {
+								dset = (H5ScalarDS) hdf5file.get(String.valueOf(chat_id) + "," + String.valueOf(user_id));
+								dset_id = dset.open();
+								
+								dset_data_temp = (int[]) dset.getData();
+								dset_data[0][0] = dset_data_temp[0] + 1;
+								dset_data[0][1] = dset_data_temp[1] + text.length();
+								
+								// For console debug:
+								System.out.println("Updating existing dset_data with new parameters: " + dset_data[0][0] + ", " + dset_data[0][1]);
+								System.out.println("dset_id == " + dset_id);
+								
+								H5.H5Dwrite(dset_id, HDF5Constants.H5T_NATIVE_INT,
+										HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
+										HDF5Constants.H5P_DEFAULT, dset_data);
+								dset_id = -1;
+								dset.close(0);
+								dset_data[0][0] = 0;
+								dset_data[0][1] = 0;
+							} else {
+								dset_data[0][0] = 1;
+								dset_data[0][1] = text.length();
+								dset = (H5ScalarDS) hdf5file.createScalarDS(
+										String.valueOf(chat_id) + "," + String.valueOf(user_id),
+										null, typeInt,
+										dims, dims,
+										null, 0,
+										null, dset_data);
+								dset_data[0][0] = 0;
+								dset_data[0][1] = 0;
+							}
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+						if (text.equals("/mystats")) {
+							try {
+								dset = (H5ScalarDS) hdf5file.get(String.valueOf(chat_id) + "," + String.valueOf(user_id));
+								dset_data_temp = (int[]) dset.getData();
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+							sendMessage(chat_id, "Your statistics:\n" +
+									"Lines|" + "Characters|" + "Efficiency\n" +
+									dset_data_temp[0] + "|" + dset_data_temp[1] + "|" + dset_data_temp[1]/dset_data_temp[0]);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
