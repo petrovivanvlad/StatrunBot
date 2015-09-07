@@ -95,7 +95,6 @@ public class Main {
 						String text = message.getString("text");
 						try {
 							if ((dset = (H5ScalarDS) hdf5file.get(String.valueOf(chat_id) + "," + String.valueOf(user_id))) != null) {
-								dset = (H5ScalarDS) hdf5file.get(String.valueOf(chat_id) + "," + String.valueOf(user_id));
 								dset_id = dset.open();
 								
 								dset_data_temp = (int[]) dset.getData();
