@@ -16,8 +16,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 public class Main {
-
-    private String BASE_URL = "https://api.telegram.org/botTOKEN/"; // You should take your token from @BotFather. Read more on telegram bots API
+    private String BASE_URL = "https://api.telegram.org/bot<TOKEN>/";
+    // You should take your token from @BotFather. Read more on telegram bots API
     private String POLLING_URL = BASE_URL + "getUpdates";
     private String SENDMESSAGE_URL = BASE_URL + "sendMessage";
 
@@ -25,6 +25,7 @@ public class Main {
     private Statement statmt;
     private ResultSet resSet;
     private int lines = 0;
+    private int lineCount = 0;
     private int chars = 0;
     private int eff = 0;
 
@@ -45,13 +46,13 @@ public class Main {
             e.printStackTrace();
         }
     }
-    private  HttpResponse<JsonNode> sendMessage(Integer chatId, String text) throws UnirestException {
+    public HttpResponse<JsonNode> sendMessage(Integer chatId, String text) throws UnirestException {
         return Unirest
                 .post(SENDMESSAGE_URL)
                 .field("chat_id", chatId)
                 .field("text", text).asJson();
     }
-    private  HttpResponse<JsonNode> getUpdates(Integer offset) throws UnirestException {
+    public HttpResponse<JsonNode> getUpdates(Integer offset) throws UnirestException {
         return Unirest
                 .post(POLLING_URL)
                 .field("offset", offset)
@@ -61,8 +62,10 @@ public class Main {
         int last_update_id = 0;
         HttpResponse<JsonNode> response;
         statmt = connection.createStatement();
-        statmt.execute("CREATE TABLE if not exists 'users' ('id' INTEGER PRIMARY KEY AUTOINCREMENT, 'first_name' TEXT, 'last_name' TEXT,'chat_id' INT, 'user_id' INT, 'lines' INT, 'chars' INT, 'eff' INT);");
-        boolean check = false; // Check for emptyness of dataset
+        statmt.execute("CREATE TABLE if not exists 'users' ('id' INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "'first_name' TEXT, 'last_name' TEXT,'chat_id' INT, 'user_id' INT, 'lines' INT," +
+                "'chars' INT, 'eff' INT);");
+        boolean check = false; // Check for emptyness of dataset. Maybe SQL can provide this check? Dunno
         resSet = statmt.executeQuery("SELECT * from users");
         if (resSet.next()){
             check = true;
@@ -105,54 +108,72 @@ public class Main {
                             .getInt("id");
                     if (message.has("text") && chat_id < 0) {
                         String text = message.getString("text");
-                        System.out.print(text + " | ");
-                        resSet = statmt.executeQuery("SELECT first_name, last_name chat_id, user_id, lines, chars, eff FROM users where chat_id = "
+                        if (text.contains("\n")) lineCount++;
+                        resSet = statmt.executeQuery("SELECT first_name, last_name chat_id, user_id," +
+                                "lines, chars, eff FROM users where chat_id = "
                                 + chat_id + " and user_id = " + user_id + ";");
                         if (resSet.next() && check == true) {
                             lines = resSet.getInt("lines");
                             chars = resSet.getInt("chars");
                             eff = chars/lines;
-                            System.out.println(lines + "/" + chars + "=" + eff);
-                            statmt.execute("UPDATE users set first_name = '" + first_name + "', last_name = '" + last_name + "', lines = "
-                                    + (lines = lines + 1) + ", chars = " + (chars + text.length()) + ", eff = " + eff +
-                                    " where chat_id = " + chat_id + " and user_id = " + user_id + ";");
-                            System.out.println("updated existed " + chat_id + " " + user_id);
+                            if (((float)chars/(float)lines) > 0.5 && ((float)chars/(float)lines) < 1) {
+                                eff = 1;
+                            } // kostyl
+                            statmt.execute("UPDATE users set first_name = '" + first_name + "'," +
+                                    "last_name = '" + last_name + "', lines = "
+                                    + (lines = lines + 1 + lineCount) + ", chars = " + (chars + text.length()) + "," +
+                                    "eff = " + eff + " where chat_id = " + chat_id + " and user_id = "
+                                    + user_id + ";");
                         } else {
-                            statmt.execute("INSERT into 'users' ('first_name', 'last_name', 'chat_id', 'user_id', 'lines', 'chars', 'eff') values ('"
-                                    + first_name + "', '" + last_name + "', '" + (chat_id) + "', '" + user_id + "', '" + 1 + "',  '"
-                                    + text.length() + "', '" + (1/text.length()) + "');");
-                            System.out.println("created new " + chat_id + " " + user_id);
+                            statmt.execute("INSERT into 'users' ('first_name', 'last_name', 'chat_id'," +
+                                    " 'user_id', 'lines', 'chars', 'eff') values ('" + first_name + "', '"
+                                    + last_name + "', '" + (chat_id) + "', '" + user_id + "', '" + 1
+                                    + lineCount + "',  '" + text.length() + "', '" + ((1 + lineCount)/text.length()) + "');");
                             check = true;
+
                         }
+                        System.out.print(chat_id + "|" + first_name + " " + last_name + ": " + text + " {"); // Monitoring messages from command line
+                        System.out.print(lines + "/" + chars + "=" + eff + "}\n");
                         if (text.startsWith("/mystats")) {
                             sendMessage(chat_id, "Your statistics:\n" +
                                     "Lines|Chars|Eff\n" +
-                                    lines + "|" + chars + "|" + chars / lines);
+                                    lines + "|" + chars + "|" + eff);
                         }
                         if (text.startsWith("/topstats")) {
-                            resSet = statmt.executeQuery("SELECT first_name, last_name, lines, chars, eff FROM users where chat_id = "
-                                    + chat_id + ";");
-                            String temp = "\n";
+                            resSet = statmt.executeQuery("SELECT first_name, last_name, lines, chars," +
+                                    " eff FROM users where chat_id = " + chat_id + ";");
+                            ArrayList<String> temp1 = new ArrayList<String>();
+                            String[] temp2;
                             while (resSet.next()) {
-                                temp = temp + (resSet.getString("first_name") + " " + resSet.getString("last_name")
+                                temp1.add(resSet.getString("first_name") + " " + resSet.getString("last_name")
                                         + "|" + resSet.getInt("lines") + "|" + resSet.getInt("chars") + "|"
-                                        + resSet.getInt("eff")) + "\n";
+                                        + resSet.getInt("eff"));
+                            }
+                            for (int u = 0; u < temp1.size(); u++) {
+                                temp2 = (temp1.get(u)).split("\\|");
+                                int min = Integer.valueOf(temp2[3]);
+                                int min_u = u;
+                                for (int j = u + 1; j < temp1.size(); j++) {
+                                    if (Integer.valueOf(Integer.valueOf(temp2[3])) < min) {
+                                        min = Integer.valueOf(temp1.get(j));
+                                        min_u = j;
+                                    }
+                                }
+                                if (u != min_u) {
+                                    int tmp = Integer.valueOf(temp1.get(u));
+                                    temp1.set(u, temp1.get(min_u));
+                                    temp1.set(min_u, String.valueOf(tmp));
+                                }
+                            }
+                            String temp = "";
+                            for (int h = 0; h < temp1.size(); h++) {
+                                temp = temp + temp1.get(h) + "\n";
                             }
                             sendMessage(chat_id, "Your statistics top:\n" +
-                                    "Name|Lines|Chars|Eff"
-                                    + temp);
-                            /*ArrayList<String> str = new ArrayList<String>();
-                            while (resSet.next()) {
-                                str.add(
-                                        String.valueOf(resSet.getInt("chat_id")) + ", "
-                                        + String.valueOf(resSet.getInt("user_id")) + ", "
-                                        + String.valueOf(resSet.getInt("lines")) + ", "
-                                        + String.valueOf(resSet.getInt("chars")));
-                            }
-                            for (int tt = 0; tt < str.size(); tt++) {
-                                sendMessage(chat_id, str.get(tt));
-                            }*/
+                                    "Name|Lines|Chars|Eff\n" + temp);
+
                         }
+                        lineCount = 0;
                     }
                 }
             }
@@ -162,3 +183,62 @@ public class Main {
         new Main();
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
