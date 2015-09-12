@@ -16,7 +16,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 public class Main {
-    private String BASE_URL = "https://api.telegram.org/bot<TOKEN>/";
+    private String BASE_URL = "https://api.telegram.org/bot<Your token>/";
     // You should take your token from @BotFather. Read more on telegram bots API
     private String POLLING_URL = BASE_URL + "getUpdates";
     private String SENDMESSAGE_URL = BASE_URL + "sendMessage";
@@ -65,7 +65,7 @@ public class Main {
         statmt.execute("CREATE TABLE if not exists 'users' ('id' INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "'first_name' TEXT, 'last_name' TEXT,'chat_id' INT, 'user_id' INT, 'lines' INT," +
                 "'chars' INT, 'eff' INT);");
-        boolean check = false; // Check for emptyness of dataset. Maybe SQL can provide this check? Dunno
+        boolean check = false; // Check for emptyness of dataset. Maybe SQL can provide this check? Dunno. In any case, eto kostyl
         resSet = statmt.executeQuery("SELECT * from users");
         if (resSet.next()){
             check = true;
@@ -93,12 +93,14 @@ public class Main {
                         first_name = message
                                 .getJSONObject("from")
                                 .getString("first_name");
+                        first_name = first_name.replace('\"', ' ').replace('\'', ' ').replace(';', ' ').toLowerCase();
                     }
                     String last_name = "";
                     if (message.getJSONObject("from").has("last_name")) {
                         last_name = message
                                 .getJSONObject("from")
                                 .getString("last_name");
+                        last_name = last_name.replace('\'', ' ').replace('\'', ' ').replace(';', ' ').toLowerCase();
                     }
                     int chat_id = message
                             .getJSONObject("chat")
@@ -107,6 +109,7 @@ public class Main {
                             .getJSONObject("from")
                             .getInt("id");
                     if (message.has("text") && chat_id < 0) {
+                        System.out.println(first_name + ' ' + last_name);
                         String text = message.getString("text");
                         if (text.contains("\n")) lineCount++;
                         resSet = statmt.executeQuery("SELECT first_name, last_name chat_id, user_id," +
@@ -115,10 +118,7 @@ public class Main {
                         if (resSet.next() && check == true) {
                             lines = resSet.getInt("lines");
                             chars = resSet.getInt("chars");
-                            eff = chars/lines;
-                            if (((float)chars/(float)lines) > 0.5 && ((float)chars/(float)lines) < 1) {
-                                eff = 1;
-                            } // kostyl
+                            eff = Math.round(chars/lines);
                             statmt.execute("UPDATE users set first_name = '" + first_name + "'," +
                                     "last_name = '" + last_name + "', lines = "
                                     + (lines = lines + 1 + lineCount) + ", chars = " + (chars + text.length()) + "," +
@@ -183,62 +183,3 @@ public class Main {
         new Main();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
