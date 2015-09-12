@@ -93,14 +93,14 @@ public class Main {
                         first_name = message
                                 .getJSONObject("from")
                                 .getString("first_name");
-                        first_name = first_name.replace('\"', ' ').replace('\'', ' ').replace(';', ' ').toLowerCase();
+                        first_name = first_name.replace('\"', ' ').replace('\'', ' ').replace(';', ' ');
                     }
                     String last_name = "";
                     if (message.getJSONObject("from").has("last_name")) {
                         last_name = message
                                 .getJSONObject("from")
                                 .getString("last_name");
-                        last_name = last_name.replace('\'', ' ').replace('\'', ' ').replace(';', ' ').toLowerCase();
+                        last_name = last_name.replace('\'', ' ').replace('\'', ' ').replace(';', ' ');
                     }
                     int chat_id = message
                             .getJSONObject("chat")
