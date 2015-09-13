@@ -16,7 +16,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 
 public class Main {
-    private String BASE_URL = "https://api.telegram.org/bot<Your token>/";
+    private String BASE_URL = "https://api.telegram.org/bot<Your Token there>/";
     // You should take your token from @BotFather. Read more on telegram bots API
     private String POLLING_URL = BASE_URL + "getUpdates";
     private String SENDMESSAGE_URL = BASE_URL + "sendMessage";
@@ -139,37 +139,19 @@ public class Main {
                                     "Lines|Chars|Eff\n" +
                                     lines + "|" + chars + "|" + eff);
                         }
-                        if (text.startsWith("/topstats")) {
-                            resSet = statmt.executeQuery("SELECT first_name, last_name, lines, chars," +
-                                    " eff FROM users where chat_id = " + chat_id + ";");
+                        if (text.startsWith("/showtop")) {
+                            resSet = statmt.executeQuery("SELECT * FROM users where chat_id = " + chat_id + " order by eff desc;");
                             ArrayList<String> temp1 = new ArrayList<String>();
-                            String[] temp2;
                             while (resSet.next()) {
                                 temp1.add(resSet.getString("first_name") + " " + resSet.getString("last_name")
                                         + "|" + resSet.getInt("lines") + "|" + resSet.getInt("chars") + "|"
                                         + resSet.getInt("eff"));
                             }
-                            for (int u = 0; u < temp1.size(); u++) {
-                                temp2 = (temp1.get(u)).split("\\|");
-                                int min = Integer.valueOf(temp2[3]);
-                                int min_u = u;
-                                for (int j = u + 1; j < temp1.size(); j++) {
-                                    if (Integer.valueOf(Integer.valueOf(temp2[3])) < min) {
-                                        min = Integer.valueOf(temp1.get(j));
-                                        min_u = j;
-                                    }
-                                }
-                                if (u != min_u) {
-                                    int tmp = Integer.valueOf(temp1.get(u));
-                                    temp1.set(u, temp1.get(min_u));
-                                    temp1.set(min_u, String.valueOf(tmp));
-                                }
-                            }
                             String temp = "";
                             for (int h = 0; h < temp1.size(); h++) {
                                 temp = temp + temp1.get(h) + "\n";
                             }
-                            sendMessage(chat_id, "Your statistics top:\n" +
+                            sendMessage(chat_id, "Efficiency top for this channel:\n" +
                                     "Name|Lines|Chars|Eff\n" + temp);
 
                         }
@@ -183,3 +165,62 @@ public class Main {
         new Main();
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
