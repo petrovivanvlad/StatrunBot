@@ -155,6 +155,10 @@ public class Main {
                                     "Name|Lines|Chars|Eff\n" + temp);
 
                         }
+                        if (text.startsWith("/help")) {
+                            sendMessage(chat_id, "/showtop - Shows top chat members on this channel by efficiency" +
+                                    "/mystats - Shows only yours chat statistics on this channel");
+                        }
                         lineCount = 0;
                     }
                 }
