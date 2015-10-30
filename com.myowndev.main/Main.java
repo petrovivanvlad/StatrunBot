@@ -100,7 +100,7 @@ public class Main {
                         last_name = message
                                 .getJSONObject("from")
                                 .getString("last_name");
-                        last_name = last_name.replace('\"'', ' ').replace('\'', ' ').replace(';', ' ');
+                        last_name = last_name.replace('\"', ' ').replace('\'', ' ').replace(';', ' ');
                     }
                     int chat_id = message
                             .getJSONObject("chat")
